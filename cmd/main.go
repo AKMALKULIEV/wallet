@@ -1,12 +1,32 @@
 package main
 
-import "github.com/AKMALKULIEV/wallet/pkg/wallet"
+import (
+	"fmt"
+
+	"github.com/AKMALKULIEV/wallet/pkg/wallet")
+
 
 
 func main() {
    svc := &wallet.Service{}
-   svc.RegisterAccount("65464615")
-   svc.Deposit(1,10 )
-   svc.RegisterAccount("4667765476")
-
+   account, err := svc.RegisterAccount("65464615")
+   if err != nil{
+      fmt.Println(err) 
+      return
+   }
+   fmt.Println(account)
+   
+   // account, err = svc.RegisterAccount("65464615")
+   // if err != nil{
+   //    fmt.Println(err) 
+   //    return
+   // }
+   // fmt.Println(account)
+   
+   err = svc.Deposit(account.ID, 10604)
+   if err != nil{
+      fmt.Println(err) 
+      return
+   }
+   fmt.Println(account.Balance)
 }
