@@ -2,17 +2,20 @@ package wallet
 
 import (
 	"errors"
+	"log"
+	"os"
+	"strconv"
 
 	"github.com/AKMALKULIEV/wallet/pkg/types"
 	"github.com/google/uuid"
 )
 
 var (
-	ErrPhoneRegistered      = errors.New("Уже зарегистрирован")
-	ErrAccountNotFound      = errors.New("Нет такого аккаунта")
-	ErrAmountMustBePositive = errors.New("Должно быть больше 0")
-	ErrPaymentNotFound      = errors.New("Платеж не найден")
-	ErrNotEnoughBalance = errors.New("balance is null")
+	ErrPhoneRegistered      = errors.New("уже зарегистрирован")
+	ErrAccountNotFound      = errors.New("нет такого аккаунта")
+	ErrAmountMustBePositive = errors.New("должно быть больше 0")
+	ErrPaymentNotFound      = errors.New("платеж не найден")
+	ErrNotEnoughBalance     = errors.New("balance is null")
 )
 
 type Service struct {
@@ -102,7 +105,6 @@ func newTestServiceUser() *testServiceUser {
 	return &testServiceUser{Service: &Service{}}
 }
 
-
 func (s *Service) Pay(accountID int64, amount types.Money, category types.PaymentCategory) (*types.Payment, error) {
 	if amount <= 0 {
 		return nil, ErrAmountMustBePositive
@@ -144,14 +146,44 @@ func (s *Service) FindPaymentByID(paymentID string) (*types.Payment, error) {
 	return nil, ErrPaymentNotFound
 }
 
-func (s* Service) Repeat(paymentID string) (*types.Payment, error) {
+func (s *Service) Repeat(paymentID string) (*types.Payment, error) {
 	pay, err := s.FindPaymentByID(paymentID)
-    if err != nil {
-		return nil, err
-	}
-	payment, err := s.Pay(pay.AccountID,pay.Amount,pay.Category)
 	if err != nil {
 		return nil, err
 	}
-	return payment, err 
+	payment, err := s.Pay(pay.AccountID, pay.Amount, pay.Category)
+	if err != nil {
+		return nil, err
+	}
+	return payment, err
+}
+func (s *Service) ExportToFile(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			log.Print(err)
+		}
+	}()
+
+	info := make([]byte, 0)
+	for _, account := range s.accounts {
+		text := []byte(
+			strconv.FormatInt(int64(account.ID), 10) + string(";") +
+				string(account.Phone) + string(";") +
+				strconv.FormatInt(int64(account.Balance), 10) + string("|"))
+
+		info = append(info, text...)
+	}
+
+	_, err = file.Write(info)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+	return nil
 }
