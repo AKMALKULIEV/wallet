@@ -4,7 +4,9 @@ import (
 	"errors"
 	"log"
 	"os"
+	"io"
 	"strconv"
+	"strings"
 
 	"github.com/AKMALKULIEV/wallet/pkg/types"
 	"github.com/google/uuid"
@@ -227,6 +229,71 @@ func (s *Service) ExportToFile(path string) error {
 	if err != nil {
 		log.Print(err)
 		return err
+	}
+	return nil
+}
+func (s *Service) ImportFromFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			log.Print(cerr)
+		}
+	}()
+
+	info := make([]byte, 0)
+	buf := make([]byte, 4)
+	for {
+		read, err := file.Read(buf)
+		if err == io.EOF {
+			info = append(info, buf[:read]...)
+			break
+		}
+
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+		info = append(info, buf[:read]...)
+	}
+
+	data := string(info)
+	log.Println("data: ", data)
+
+	acc := strings.Split(data, "|")
+	log.Println("acc: ", acc)
+
+	for _, operation := range acc {
+
+		strAcc := strings.Split(operation, ";")
+		log.Println("strAcc:", strAcc)
+
+		id, err := strconv.ParseInt(strAcc[0], 10, 64)
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+
+		phone := types.Phone(strAcc[1])
+
+		balance, err := strconv.ParseInt(strAcc[2], 10, 64)
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+
+		account := &types.Account{
+			ID:      id,
+			Phone:   phone,
+			Balance: types.Money(balance),
+		}
+
+		s.accounts = append(s.accounts, account)
+		log.Print(account)
 	}
 	return nil
 }
