@@ -2,9 +2,9 @@ package wallet
 
 import (
 	"errors"
+	"io"
 	"log"
 	"os"
-	"io"
 	"strconv"
 	"strings"
 
@@ -216,6 +216,7 @@ func (s *Service) ExportToFile(path string) error {
 	}()
 
 	info := make([]byte, 0)
+	lastStr := ""
 	for _, account := range s.accounts {
 		text := []byte(
 			strconv.FormatInt(int64(account.ID), 10) + string(";") +
@@ -223,13 +224,16 @@ func (s *Service) ExportToFile(path string) error {
 				strconv.FormatInt(int64(account.Balance), 10) + string("|"))
 
 		info = append(info, text...)
+		str := string(info)
+		lastStr = strings.TrimSuffix(str, "|")
 	}
 
-	_, err = file.Write(info)
+	_, err = file.Write([]byte(lastStr))
 	if err != nil {
 		log.Print(err)
 		return err
 	}
+	log.Printf("%#v", file)
 	return nil
 }
 func (s *Service) ImportFromFile(path string) error {
