@@ -185,7 +185,7 @@ func TestService_ExportToFile_success(t *testing.T) {
 		return
 	}
 
-	err = s.ExportToFile("data1/hello.txt")
+	err = s.ExportToFile("newdata/hello.txt")
 	if err != nil {
 		t.Error(err)
 		return
@@ -214,7 +214,7 @@ func TestService_ImportFromFile_success(t *testing.T) {
 	pay, _ := s.Pay(1, 100, "phone")
 	s.FavoritePayment(pay.ID, "my_phone")
 
-	err := s.ImportFromFile("data1/hello.txt")
+	err := s.ImportFromFile("newdata/hello.txt")
 	if err != nil {
 		t.Error(err)
 		return
@@ -308,16 +308,16 @@ func TestService_Import_Error(t *testing.T) {
 func TestService_Import_emptyFiles(t *testing.T) {
 	s := newTestService()
 
-	file1, _ := os.Create("data1/accounts.dump")
+	file1, _ := os.Create("newdata/accounts.dump")
 	defer file1.Close()
 
-	file2, _ := os.Create("data1/payments.dump")
+	file2, _ := os.Create("newdata/payments.dump")
 	defer file2.Close()
 
-	file3, _ := os.Create("data1/favorites.dump")
+	file3, _ := os.Create("newdata/favorites.dump")
 	defer file3.Close()
 
-	err := s.Import("data1")
+	err := s.Import("newdata")
 	if err != nil {
 		t.Error(err)
 		return
