@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"sync"
 	"errors"
 	"io"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	
 
 	"github.com/AKMALKULIEV/wallet/pkg/types"
 	"github.com/google/uuid"
@@ -541,4 +543,41 @@ func (s *Service) Import(dir string) error {
 	}
 
 	return nil
+}
+func (s *Service) SumPayments(goroutines int) types.Money {
+
+	if goroutines < 1 {
+		goroutines = 1
+	}
+
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+
+	num := len(s.payments)/goroutines + 1
+	sum := types.Money(0)
+
+	for i := 0; i < goroutines; i++ {
+
+		wg.Add(1)
+		total := types.Money(0)
+
+		go func(val int) {
+			defer wg.Done()
+			lowIndex := val * num
+			highIndex := (val * num) + num
+
+			for j := lowIndex; j < highIndex; j++ {
+				if j > len(s.payments)-1 {
+					break
+				}
+				total += s.payments[j].Amount
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			sum += total
+		}(i)
+	}
+
+	wg.Wait()
+	return sum
 }
