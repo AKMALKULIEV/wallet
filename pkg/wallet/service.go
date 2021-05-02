@@ -30,6 +30,10 @@ type Service struct {
 	payments      []*types.Payment
 	favorites     []*types.Favorite
 }
+type Progress struct {
+	Part   int
+	Result types.Money
+}
 
 func (s *Service) RegisterAccount(phone types.Phone) (*types.Account, error) {
 	for _, account := range s.accounts {
@@ -580,4 +584,66 @@ func (s *Service) SumPayments(goroutines int) types.Money {
 
 	wg.Wait()
 	return sum
+}
+func (s *Service) SumPaymentsWithProgress() <-chan Progress {
+
+	size := 100_000
+
+	data := []types.Money{0}
+	for _, payment := range s.payments {
+		data = append(data, payment.Amount)
+	}
+
+	goroutines := 1 + len(data)/size
+
+	if goroutines <= 1 {
+		goroutines = 1
+	}
+
+	channels := make([]<-chan Progress, goroutines)
+
+	for i := 0; i < goroutines; i++ {
+
+		lowIndex := i * size
+		highIndex := (i + 1) * size
+
+		if highIndex > len(data) {
+			highIndex = len(data)
+		}
+
+		ch := make(chan Progress)
+		go func(ch chan<- Progress, data []types.Money) {
+			defer close(ch)
+			sum := types.Money(0)
+			for _, v := range data {
+				sum += v
+			}
+			ch <- Progress{
+				Part:   len(data),
+				Result: sum,
+			}
+		}(ch, data[lowIndex:highIndex])
+		channels[i] = ch
+	}
+	return Merge(channels)
+}
+func Merge(channels []<-chan Progress) <-chan Progress {
+	wg := sync.WaitGroup{}
+	wg.Add(len(channels))
+
+	merged := make(chan Progress)
+
+	for _, ch := range channels {
+		go func(ch <-chan Progress) {
+			defer wg.Done()
+			for val := range ch {
+				merged <- val
+			}
+		}(ch)
+	}
+	go func() {
+		defer close(merged)
+		wg.Wait()
+	}()
+	return merged
 }

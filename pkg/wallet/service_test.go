@@ -323,3 +323,90 @@ func TestService_Import_emptyFiles(t *testing.T) {
 		return
 	}
 }
+
+func TestService_SumPaymentsWithProgress_success1(t *testing.T) {
+	s := newTestService()
+
+	n := 1_000_000
+	var payments []*types.Payment
+	for i := 0; i < n; i++ {
+		payment := &types.Payment{
+			AccountID: 1,
+			Amount:    1,
+			Category:  "phone",
+			Status:    types.PaymentStatusInProgress,
+		}
+		payments = append(payments, payment)
+	}
+
+	s.payments = payments
+
+	want := types.Money(1_000_000)
+	result := types.Money(0)
+	for j := range s.SumPaymentsWithProgress() {
+		result += j.Result
+	}
+
+	if result != want {
+		t.Errorf("INVALID: result_we_got %v, result_we_want %v", result, want)
+	}
+}
+
+func TestService_SumPaymentsWithProgress_success2(t *testing.T) {
+	s := newTestService()
+
+	n := -1
+	var payments []*types.Payment
+	for i := 0; i < n; i++ {
+		payment := &types.Payment{
+			AccountID: 1,
+			Amount:    1,
+			Category:  "phone",
+			Status:    types.PaymentStatusInProgress,
+		}
+		payments = append(payments, payment)
+	}
+
+	s.payments = payments
+
+	want := types.Money(0)
+	result := types.Money(0)
+	for j := range s.SumPaymentsWithProgress() {
+		result += j.Result
+	}
+
+	if result != want {
+		t.Errorf("result_we_got %v, result_we_want %v", result, want)
+	}
+}
+
+func BenchmarkSumPaymentsWithProgress(b *testing.B) {
+	s := newTestService()
+
+	n := 1_000
+	var payments []*types.Payment
+	for i := 0; i < n; i++ {
+		payment := &types.Payment{
+			ID:        "",
+			AccountID: 1,
+			Amount:    1,
+			Category:  "phone",
+			Status:    types.PaymentStatusInProgress,
+		}
+
+		payments = append(payments, payment)
+	}
+
+	s.payments = payments
+	for i := 0; i < b.N; i++ {
+		result := types.Money(0)
+		for j := range s.SumPaymentsWithProgress() {
+			result += j.Result
+		}
+
+		want := types.Money(1_000)
+		if result != want {
+			b.Errorf("result_we_got %v, result_we_want %v", result, want)
+		}
+	}
+}
